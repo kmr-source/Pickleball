@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dink Deck — Pickleball Group Scheduler</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --court: #2c5530;
+    --court-light: #3a7040;
+    --court-line: #f4f1e6;
+    --ball: #d9e336;
+    --ball-dark: #b8c220;
+    --navy: #16232b;
+    --paper: #f4f1e6;
+    --paper-dim: #e8e3d2;
+    --coral: #ff6b5b;
+    --ink: #16232b;
+    --glow: #ffd23f;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background: var(--navy);
+    background-image:
+      radial-gradient(circle at 10% 10%, rgba(217,227,54,0.06), transparent 40%),
+      radial-gradient(circle at 90% 80%, rgba(255,107,91,0.07), transparent 45%);
+    color: var(--paper);
+    font-family: 'Fredoka', sans-serif;
+    min-height: 100vh;
+    padding: 32px 20px 80px;
+  }
+  .wrap{ max-width: 1080px; margin: 0 auto; }
+
+  /* HEADER */
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    flex-wrap: wrap; gap: 16px;
+    margin-bottom: 36px;
+    padding-bottom: 24px;
+    border-bottom: 3px dashed rgba(244,241,230,0.15);
+  }
+  .brand{ display:flex; align-items:center; gap: 14px; }
+  .ball-icon{
+    width: 46px; height: 46px; border-radius: 50%;
+    background: radial-gradient(circle at 32% 28%, #f4f7c8, var(--ball) 55%, var(--ball-dark) 100%);
+    position: relative;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.25), 0 8px 16px rgba(217,227,54,0.25);
+    animation: bob 3.2s ease-in-out infinite;
+  }
+  .ball-icon::before, .ball-icon::after{
+    content:''; position:absolute; border-radius:50%; background: rgba(22,35,43,0.35);
+    width:5px; height:5px;
+  }
+  .ball-icon::before{ top:10px; left:14px; }
+  .ball-icon::after{ top:22px; left:26px; }
+  @keyframes bob{ 0%,100%{ transform: translateY(0) rotate(0deg);} 50%{ transform: translateY(-6px) rotate(25deg);} }
+  h1{ font-size: 1.5rem; letter-spacing: 0.5px; }
+  h1 span{ color: var(--ball); }
+  .tagline{ font-family:'Space Mono', monospace; font-size:0.72rem; color: rgba(244,241,230,0.5); text-transform:uppercase; letter-spacing:1.5px; margin-top:2px;}
+
+  .stat-pill{
+    font-family:'Space Mono', monospace; font-size: 0.75rem;
+    background: rgba(244,241,230,0.06); border:1px solid rgba(244,241,230,0.15);
+    padding: 8px 14px; border-radius: 999px; color: var(--paper);
+  }
+
+  /* PANELS */
+  .grid-layout{ display:grid; grid-template-columns: 320px 1fr; gap: 24px; }
+  @media (max-width: 820px){ .grid-layout{ grid-template-columns: 1fr; } }
+
+  .panel{
+    background: linear-gradient(180deg, rgba(244,241,230,0.05), rgba(244,241,230,0.02));
+    border: 1px solid rgba(244,241,230,0.12);
+    border-radius: 18px;
+    padding: 22px;
+  }
+  .panel h2{
+    font-size: 1rem; text-transform: uppercase; letter-spacing: 1px;
+    display:flex; align-items:center; gap:8px; margin-bottom: 6px;
+  }
+  .panel .sub{ font-size:0.78rem; color: rgba(244,241,230,0.5); margin-bottom:18px; line-height:1.5; }
+
+  /* PLAYER LIST */
+  .player-row{
+    display:flex; align-items:center; gap:10px;
+    padding: 10px 10px; border-radius:12px;
+    margin-bottom:8px; background: rgba(244,241,230,0.03);
+    border: 1px solid transparent;
+    transition: all .2s ease;
+  }
+  .player-row.active-today{ border-color: rgba(217,227,54,0.35); background: rgba(217,227,54,0.06); }
+  .avatar{
+    width: 34px; height:34px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:0.85rem; color: var(--navy);
+    flex-shrink:0;
+  }
+  .player-name{ font-size:0.88rem; flex:1; cursor:pointer; border-bottom:1px dashed transparent; }
+  .player-name:hover{ border-bottom-color: rgba(244,241,230,0.35); }
+  .player-status{ font-family:'Space Mono', monospace; font-size:0.62rem; text-transform:uppercase; color: rgba(244,241,230,0.4); }
+  .player-status.on{ color: var(--ball); }
+  .name-edit-input{
+    font-family:'Fredoka'; font-size:0.88rem; width:100%;
+    background: rgba(244,241,230,0.1); border:1px solid rgba(217,227,54,0.5);
+    border-radius:6px; padding:3px 6px; color: var(--paper);
+  }
+  .edit-btn{
+    background:none; border:none; cursor:pointer; color: rgba(244,241,230,0.4);
+    font-size:0.8rem; padding:4px; line-height:1; flex-shrink:0;
+    transition: color .15s ease;
+  }
+  .edit-btn:hover{ color: var(--ball); }
+
+  .remove-btn{
+    background:none; border:none; cursor:pointer; color: rgba(244,241,230,0.3);
+    font-size:0.95rem; padding:4px; line-height:1; flex-shrink:0;
+    transition: color .15s ease;
+  }
+  .remove-btn:hover{ color: var(--coral); }
+
+  .add-player{
+    display:flex; gap:8px; margin-top:16px;
+  }
+  .add-player input{
+    flex:1; background: rgba(244,241,230,0.05); border:1px solid rgba(244,241,230,0.2);
+    border-radius:10px; padding:10px 12px; color: var(--paper); font-family:'Fredoka'; font-size:0.85rem;
+  }
+  .add-player input::placeholder{ color: rgba(244,241,230,0.35); }
+  .add-player button{
+    background: var(--coral); border:none; color: var(--navy); font-weight:700;
+    border-radius:10px; padding: 0 16px; cursor:pointer; font-family:'Fredoka';
+  }
+
+  .hint-note{
+    margin-top: 18px; padding: 12px 14px; border-radius: 12px;
+    background: rgba(217,227,54,0.06); border:1px solid rgba(217,227,54,0.2);
+    font-size: 0.72rem; line-height:1.5; color: rgba(244,241,230,0.65);
+  }
+  .hint-note b{ color: var(--ball); }
+
+  /* CALENDAR */
+  .cal-header{
+    display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;
+  }
+  .cal-nav{ display:flex; gap:8px; align-items:center; }
+  .cal-nav button{
+    background: rgba(244,241,230,0.06); border:1px solid rgba(244,241,230,0.2);
+    color: var(--paper); width:32px; height:32px; border-radius:8px; cursor:pointer; font-size:1rem;
+  }
+  .cal-month{ font-weight:700; font-size:1.1rem; min-width:170px; text-align:center; }
+
+  .legend{ display:flex; gap:16px; font-family:'Space Mono', monospace; font-size:0.65rem; color: rgba(244,241,230,0.55); }
+  .legend span{ display:inline-flex; align-items:center; gap:6px; }
+  .dot{ width:9px; height:9px; border-radius:50%; display:inline-block; }
+  .dot.lit{ background: var(--glow); box-shadow:0 0 8px var(--glow); }
+  .dot.some{ background: rgba(217,227,54,0.4); }
+  .dot.none{ background: rgba(244,241,230,0.15); }
+
+  .weekdays{ display:grid; grid-template-columns: repeat(7,1fr); gap:6px; margin-bottom:6px; }
+  .weekdays div{ text-align:center; font-family:'Space Mono', monospace; font-size:0.62rem; color: rgba(244,241,230,0.35); text-transform:uppercase; }
+
+  .cal-grid{ display:grid; grid-template-columns: repeat(7,1fr); gap:6px; }
+  .day-cell{
+    aspect-ratio: 1/0.85;
+    border-radius: 12px;
+    background: rgba(244,241,230,0.03);
+    border: 1px solid rgba(244,241,230,0.08);
+    padding: 8px 8px 6px;
+    display:flex; flex-direction:column; justify-content:space-between;
+    cursor:pointer; position:relative; overflow:hidden;
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .day-cell:hover{ transform: translateY(-2px); border-color: rgba(244,241,230,0.25); }
+  .day-cell.empty{ background:none; border:none; cursor:default; }
+  .day-cell.empty:hover{ transform:none; }
+  .day-num{ font-size:0.78rem; font-weight:600; color: rgba(244,241,230,0.7); }
+  .day-count{ font-family:'Space Mono', monospace; font-size:0.62rem; color: rgba(244,241,230,0.4); }
+
+  .day-cell.lit{
+    background: linear-gradient(160deg, rgba(255,210,63,0.35), rgba(217,227,54,0.18));
+    border-color: var(--glow);
+    box-shadow: 0 0 0 1px rgba(255,210,63,0.4), 0 0 24px rgba(255,210,63,0.35);
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+  .day-cell.lit .day-num{ color: var(--navy); font-weight:700; }
+  .day-cell.lit .day-count{ color: rgba(22,35,43,0.7); font-weight:700; }
+  @keyframes pulse{
+    0%,100%{ box-shadow: 0 0 0 1px rgba(255,210,63,0.4), 0 0 18px rgba(255,210,63,0.28); }
+    50%{ box-shadow: 0 0 0 1px rgba(255,210,63,0.6), 0 0 30px rgba(255,210,63,0.5); }
+  }
+  .day-cell.some{ background: rgba(217,227,54,0.06); border-color: rgba(217,227,54,0.2); }
+
+  .day-cell.today{ outline: 1px dashed rgba(244,241,230,0.4); outline-offset: -1px; }
+
+  .mini-avatars{ display:flex; }
+  .mini-avatars span{
+    width:16px; height:16px; border-radius:50%; font-size:0.5rem; font-weight:700;
+    display:flex; align-items:center; justify-content:center; color: var(--navy);
+    margin-left:-5px; border: 1.5px solid var(--navy);
+  }
+  .mini-avatars span:first-child{ margin-left:0; }
+
+  /* DETAIL DRAWER */
+  .drawer{
+    margin-top: 20px; padding: 18px 20px; border-radius: 16px;
+    background: rgba(244,241,230,0.04); border: 1px solid rgba(244,241,230,0.12);
+    display:none;
+  }
+  .drawer.open{ display:block; }
+  .drawer-title{ font-weight:700; font-size:0.95rem; margin-bottom:4px; }
+  .drawer-sub{ font-family:'Space Mono', monospace; font-size:0.68rem; color: rgba(244,241,230,0.45); margin-bottom:14px; }
+  .drawer-players{ display:flex; flex-wrap:wrap; gap:8px; }
+  .drawer-chip{
+    display:flex; align-items:center; gap:6px;
+    background: rgba(244,241,230,0.06); border:1px solid rgba(244,241,230,0.15);
+    padding: 5px 10px 5px 5px; border-radius:999px; font-size:0.78rem;
+  }
+  .drawer-chip .av{ width:22px; height:22px; font-size:0.6rem; }
+
+  .lit-banner{
+    margin-top:12px; display:flex; align-items:center; gap:8px;
+    background: rgba(255,210,63,0.12); border:1px solid rgba(255,210,63,0.4);
+    color: var(--glow); padding:8px 12px; border-radius:10px; font-size:0.78rem; font-weight:600;
+  }
+
+  footer{ text-align:center; margin-top:40px; font-family:'Space Mono', monospace; font-size:0.68rem; color: rgba(244,241,230,0.3); }
+
+  ::-webkit-scrollbar{ width:8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="ball-icon"></div>
+      <div>
+        <h1>Dink <span>Deck</span></h1>
+        <div class="tagline">group calendar for pickleball crews</div>
+      </div>
+    </div>
+    <div class="stat-pill" id="statPill">0 players added</div>
+  </header>
+
+  <div class="grid-layout">
+
+    <!-- PLAYERS PANEL -->
+    <div class="panel">
+      <h2>🎾 Your Crew</h2>
+      <div class="sub">Add each player, then tap a date on the calendar to mark who's free. No account linking needed — availability lives right here on Dink Deck.</div>
+
+      <div id="playerList"></div>
+
+      <div class="add-player">
+        <input id="newPlayerName" type="text" placeholder="Add a player name…" maxlength="18">
+        <button id="addPlayerBtn">Add</button>
+      </div>
+
+      <div class="hint-note">
+        <b>How it works:</b> click any date on the calendar to open it, then tap a player's chip to mark them free. Once 5 or more players are free on a date, it lights up.
+      </div>
+    </div>
+
+    <!-- CALENDAR PANEL -->
+    <div class="panel">
+      <div class="cal-header">
+        <div class="cal-nav">
+          <button id="prevMonth">‹</button>
+          <div class="cal-month" id="calMonthLabel"></div>
+          <button id="nextMonth">›</button>
+        </div>
+        <div class="legend">
+          <span><i class="dot lit"></i> 5+ available</span>
+          <span><i class="dot some"></i> some available</span>
+          <span><i class="dot none"></i> none yet</span>
+        </div>
+      </div>
+
+      <div class="weekdays">
+        <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+
+      <div class="drawer" id="drawer">
+        <div class="drawer-title" id="drawerTitle">—</div>
+        <div class="drawer-sub" id="drawerSub">Tap players to toggle availability for this date</div>
+        <div class="drawer-players" id="drawerPlayers"></div>
+        <div class="lit-banner" id="litBanner" style="display:none;">⚡ 5 or more players free — court's lighting up!</div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>DINK DECK · a scheduling concept for club nights, ladder matches &amp; open play</footer>
+</div>
+
+<script>
+(function(){
+  const COLORS = ['#ff6b5b','#d9e336','#4fb0c6','#f4a261','#c084fc','#5fd68f','#f472b6','#60a5fa'];
+  const STORAGE = { players: [], availability: {} }; // in-memory session state
+
+  const SAMPLE_NAMES = ['Maya','Deshawn','Priya','Owen'];
+
+  function initials(name){
+    return name.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
+  }
+  function colorFor(idx){ return COLORS[idx % COLORS.length]; }
+
+  function addPlayer(name, seedDemo){
+    const id = 'p' + Date.now() + Math.random().toString(36).slice(2,6);
+    STORAGE.players.push({ id, name });
+    if(seedDemo) seedSampleAvailability(id);
+    renderPlayers();
+    updateStatPill();
+  }
+
+  SAMPLE_NAMES.forEach((n,i)=> addPlayer(n, i < 2));
+
+  function renderPlayers(){
+    const list = document.getElementById('playerList');
+    list.innerHTML = '';
+    STORAGE.players.forEach((p, idx)=>{
+      const row = document.createElement('div');
+      row.className = 'player-row';
+      row.innerHTML = `
+        <div class="avatar" style="background:${colorFor(idx)}">${initials(p.name)}</div>
+        <div style="flex:1; min-width:0;">
+          <div class="player-name" data-id="${p.id}" title="Click to rename">${p.name}</div>
+          <div class="player-status">on the crew</div>
+        </div>
+        <button class="edit-btn" data-id="${p.id}" title="Rename player">✎</button>
+        <button class="remove-btn" data-id="${p.id}" title="Remove player">✕</button>
+      `;
+      list.appendChild(row);
+    });
+    list.querySelectorAll('.player-name').forEach(el=>{
+      el.addEventListener('click', ()=> startEditName(el.dataset.id));
+    });
+    list.querySelectorAll('.edit-btn').forEach(el=>{
+      el.addEventListener('click', ()=> startEditName(el.dataset.id));
+    });
+    list.querySelectorAll('.remove-btn').forEach(el=>{
+      el.addEventListener('click', ()=> removePlayer(el.dataset.id));
+    });
+  }
+
+  function removePlayer(id){
+    STORAGE.players = STORAGE.players.filter(p=>p.id!==id);
+    Object.values(STORAGE.availability).forEach(set=> set.delete(id));
+    renderPlayers();
+    updateStatPill();
+    renderCalendar();
+    if(drawerDate) openDrawer(drawerDate);
+  }
+
+  function startEditName(id){
+    const nameEl = document.querySelector(`.player-name[data-id="${id}"]`);
+    if(!nameEl || nameEl.querySelector('input')) return;
+    const player = STORAGE.players.find(p=>p.id===id);
+    if(!player) return;
+    const current = player.name;
+    nameEl.innerHTML = `<input class="name-edit-input" type="text" maxlength="18" value="${current.replace(/"/g,'&quot;')}">`;
+    const input = nameEl.querySelector('input');
+    input.focus();
+    input.select();
+
+    const commit = ()=>{
+      const newName = input.value.trim();
+      player.name = newName || current;
+      renderPlayers();
+      renderCalendar();
+      if(drawerDate) openDrawer(drawerDate);
+    };
+    input.addEventListener('keydown', e=>{
+      if(e.key === 'Enter') commit();
+      if(e.key === 'Escape'){ renderPlayers(); }
+    });
+    input.addEventListener('blur', commit);
+    input.addEventListener('click', e=> e.stopPropagation());
+  }
+
+  function updateStatPill(){
+    const n = STORAGE.players.length;
+    document.getElementById('statPill').textContent = `${n} player${n===1?'':'s'} added`;
+  }
+
+  document.getElementById('addPlayerBtn').addEventListener('click', ()=>{
+    const input = document.getElementById('newPlayerName');
+    const name = input.value.trim();
+    if(!name) return;
+    addPlayer(name, false);
+    input.value = '';
+  });
+  document.getElementById('newPlayerName').addEventListener('keydown', e=>{
+    if(e.key==='Enter') document.getElementById('addPlayerBtn').click();
+  });
+
+  // ---- Calendar ----
+  let viewDate = new Date();
+  viewDate.setDate(1);
+  let drawerDate = null;
+
+  function dateKey(y,m,d){ return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
+
+  function seedSampleAvailability(playerId){
+    // simulate "free/busy" pull: mark this player available on a handful of pseudo-random upcoming days
+    const today = new Date();
+    for(let i=0;i<45;i++){
+      const d = new Date(today.getFullYear(), today.getMonth(), today.getDate()+i);
+      const seed = (d.getDate()*7 + playerId.charCodeAt(1) + i) % 5;
+      if(seed === 0 || seed === 2){
+        const key = dateKey(d.getFullYear(), d.getMonth(), d.getDate());
+        if(!STORAGE.availability[key]) STORAGE.availability[key] = new Set();
+        STORAGE.availability[key].add(playerId);
+      }
+    }
+  }
+
+  function toggleAvailability(playerId, key){
+    if(!STORAGE.availability[key]) STORAGE.availability[key] = new Set();
+    const set = STORAGE.availability[key];
+    if(set.has(playerId)) set.delete(playerId); else set.add(playerId);
+    renderCalendar();
+    openDrawer(key);
+  }
+
+  function renderCalendar(){
+    const y = viewDate.getFullYear(), m = viewDate.getMonth();
+    document.getElementById('calMonthLabel').textContent =
+      viewDate.toLocaleString('default',{month:'long', year:'numeric'});
+
+    const grid = document.getElementById('calGrid');
+    grid.innerHTML = '';
+    const firstDow = new Date(y,m,1).getDay();
+    const daysInMonth = new Date(y,m+1,0).getDate();
+    const todayKey = dateKey(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+
+    for(let i=0;i<firstDow;i++){
+      const empty = document.createElement('div');
+      empty.className = 'day-cell empty';
+      grid.appendChild(empty);
+    }
+
+    for(let d=1; d<=daysInMonth; d++){
+      const key = dateKey(y,m,d);
+      const set = STORAGE.availability[key] || new Set();
+      const count = set.size;
+      const cell = document.createElement('div');
+      cell.className = 'day-cell';
+      if(count >= 5) cell.classList.add('lit');
+      else if(count > 0) cell.classList.add('some');
+      if(key === todayKey) cell.classList.add('today');
+
+      const avatarsHtml = Array.from(set).slice(0,4).map(pid=>{
+        const idx = STORAGE.players.findIndex(p=>p.id===pid);
+        const p = STORAGE.players[idx];
+        if(!p) return '';
+        return `<span style="background:${colorFor(idx)}">${initials(p.name)}</span>`;
+      }).join('');
+
+      cell.innerHTML = `
+        <div class="day-num">${d}</div>
+        <div class="mini-avatars">${avatarsHtml}</div>
+        <div class="day-count">${count ? count + ' free' : ''}</div>
+      `;
+      cell.addEventListener('click', ()=> openDrawer(key));
+      grid.appendChild(cell);
+    }
+  }
+
+  function openDrawer(key){
+    drawerDate = key;
+    const drawer = document.getElementById('drawer');
+    drawer.classList.add('open');
+    const [y,m,d] = key.split('-').map(Number);
+    const dispDate = new Date(y, m-1, d);
+    document.getElementById('drawerTitle').textContent =
+      dispDate.toLocaleDateString('default',{weekday:'long', month:'long', day:'numeric'});
+
+    const set = STORAGE.availability[key] || new Set();
+    document.getElementById('drawerSub').textContent =
+      `${set.size} player${set.size===1?'':'s'} available — tap a player to toggle`;
+
+    const chips = document.getElementById('drawerPlayers');
+    chips.innerHTML = '';
+    STORAGE.players.forEach((p, idx)=>{
+      const chip = document.createElement('div');
+      chip.className = 'drawer-chip';
+      chip.style.cursor = 'pointer';
+      const isOn = set.has(p.id);
+      chip.style.opacity = isOn ? '1' : '0.6';
+      chip.innerHTML = `<span class="avatar av" style="background:${colorFor(idx)}">${initials(p.name)}</span> ${p.name} ${isOn ? '✓' : ''}`;
+      chip.addEventListener('click', ()=>{
+        toggleAvailability(p.id, key);
+      });
+      chips.appendChild(chip);
+    });
+
+    document.getElementById('litBanner').style.display = set.size >= 5 ? 'flex' : 'none';
+  }
+
+  document.getElementById('prevMonth').addEventListener('click', ()=>{
+    viewDate.setMonth(viewDate.getMonth()-1);
+    renderCalendar();
+  });
+  document.getElementById('nextMonth').addEventListener('click', ()=>{
+    viewDate.setMonth(viewDate.getMonth()+1);
+    renderCalendar();
+  });
+
+  renderPlayers();
+  updateStatPill();
+  renderCalendar();
+})();
+</script>
+</body>
+</html>
